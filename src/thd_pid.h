@@ -1,8 +1,7 @@
 /*
- * thd_engine_therm_sys_fs.h: thermal engine class implementation
- *  for acpi style	sysfs control.
+ * thd_pid.h: pid interface
  *
- * Copyright (C) 2012 Intel Corporation. All rights reserved.
+ * Copyright (C) 2013 Intel Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License version
@@ -23,26 +22,24 @@
  *
  */
 
-#ifndef THD_ENGINE_THERM_SYSFS_H_
-#define THD_ENGINE_THERM_SYSFS_H_
+#include "thermald.h"
+#include <time.h>
 
-#include "thd_engine.h"
+class cthd_pid {
 
-class cthd_engine_therm_sysfs: public cthd_engine
-{
 private:
-	csys_fs thd_sysfs;
-	bool parser_init_done;
-
-	void parser_init();
-	int read_xml_thermal_zones();
-	int read_xml_cooling_device();
+	double err_sum, last_err;
+	time_t last_time;
+	unsigned int target_temp;
 
 public:
-	cthd_engine_therm_sysfs();
-	int read_thermal_zones();
-	int read_cooling_devices();
+	cthd_pid();
+	double kp, ki, kd;
+	int pid_output(unsigned int curr_temp);
+	void set_target_temp(unsigned int temp) {
+		target_temp = temp;
+	}
+	void reset() {
+		kp = ki = kd = err_sum = last_err = last_time = 0;
+	}
 };
-
-
-#endif /* THD_ENGINE_ZONE_CONTROL_H_ */

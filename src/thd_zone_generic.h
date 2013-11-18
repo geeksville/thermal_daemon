@@ -1,7 +1,7 @@
 /*
- * thd_zone_dts_sensor.h: thermal engine DTS sensor class interface
+ * thd_zone_generic.h: zone interface for xml conf
  *
- * Copyright (C) 2012 Intel Corporation. All rights reserved.
+ * Copyright (C) 2013 Intel Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License version
@@ -20,28 +20,27 @@
  *
  * Author Name <Srinivas.Pandruvada@linux.intel.com>
  *
- * This implementation allows to use core temperature interface.
  */
 
-#ifndef THD_ZONE_DTS_SENSOR_H_
-#define THD_ZONE_DTS_SENSOR_H_
+#ifndef THD_ZONE_GENERIC_H_
+#define THD_ZONE_GENERIC_H_
 
-#include "thd_zone_dts.h"
+#include "thd_zone.h"
 
-class cthd_zone_dts_sensor: public cthd_zone_dts
-{
+class cthd_zone_generic: public cthd_zone {
 private:
-	int index;
-	unsigned int read_cpu_mask();
-	bool conf_present;
+	int trip_point_cnt;
+	int config_index;
+	cthd_zone *zone;
+	std::vector<cthd_sensor *> sensor_list;
 
 public:
-	cthd_zone_dts_sensor(int count, int _index, std::string path);
-	int read_trip_points();
-	unsigned int read_zone_temp();
 
+	cthd_zone_generic(int index, int _config_index, std::string type);
+
+	virtual int read_trip_points();
+	virtual int read_cdev_trip_points();
+	virtual void zone_bind_sensors();
 };
 
-
-
-#endif /* THD_ZONE_DTS_SENSOR_H_ */
+#endif /* THD_ZONE_GENERIC_H_ */

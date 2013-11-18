@@ -1,7 +1,7 @@
 /*
- * thd_cdev_pstates.h: thermal cooling class interface
- *	using T states.
- * Copyright (C) 2012 Intel Corporation. All rights reserved.
+ * thd_zone_surface.h: zone interface for external surface
+ *
+ * Copyright (C) 2013 Intel Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License version
@@ -21,26 +21,21 @@
  * Author Name <Srinivas.Pandruvada@linux.intel.com>
  *
  */
-#ifndef THD_CDEV_TSTATES_H_
-#define THD_CDEV_TSTATES_H_
 
-#include "thd_cdev.h"
-#include "thd_msr.h"
+#ifndef THD_ZONE_SURFACE_H_
+#define THD_ZONE_SURFACE_H_
 
-class cthd_cdev_tstates: public cthd_cdev
-{
+#include "thd_zone_therm_sys_fs.h"
+#include "thd_engine.h"
+
+class cthd_zone_surface {
 private:
-	int t_state_index;
-	cthd_msr msr;
-	int cpu_index;
+	cthd_zone *zone;
 
 public:
-	static const int t_states_cnt = 7;
-	cthd_cdev_tstates(unsigned int _index, int _cpu_index): cthd_cdev(_index, ""),
-	cpu_index(_cpu_index){}
+	cthd_zone_surface();
 
-	void set_curr_state(int state, int arg);
-	int get_max_state();
+	int init();
 };
 
-#endif /* THD_CDEV_TSTATES_H_ */
+#endif /* THD_ZONE_SURFACE_H_ */
