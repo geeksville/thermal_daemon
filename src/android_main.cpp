@@ -118,19 +118,22 @@ static void thermald_dbus_listen() {
 			}
 			thd_log_info("Received dbus msg %s\n", method);
 
-			if (!strcasecmp(method, "SetUserSetPoint")) {
+			if (!strcasecmp(method, "SetUserMaxTemperature")) {
 				bool status;
+				char *zone_name;
 				char *set_point;
 
 				DBusError error;
 
 				dbus_error_init(&error);
-				if (dbus_message_get_args(msg, &error, DBUS_TYPE_STRING,
-						&set_point, DBUS_TYPE_INVALID)) {
+				if (dbus_message_get_args(msg, &error,
+						DBUS_TYPE_STRING, &zone_name,
+						DBUS_TYPE_STRING, &set_point,
+						DBUS_TYPE_INVALID)) {
 					thd_log_info("New Set Point %s\n", set_point);
 					cthd_preference thd_pref;
-					if (thd_engine->thd_engine_set_user_set_point(
-							(char*) set_point) == THD_SUCCESS)
+					if (thd_engine->thd_engine_set_user_max_temp(
+							zone_name, set_point) == THD_SUCCESS)
 						thd_engine->send_message(PREF_CHANGED, 0, NULL);
 				} else {
 					thd_log_error("dbus_message_get_args failed %s\n",
