@@ -68,7 +68,7 @@ public:
 	cthd_trip_point(int _index, trip_point_type_t _type, unsigned int _temp,
 			unsigned int _hyst, int _zone_id, int _sensor_id,
 			trip_control_type_t _control_type = PARALLEL);
-	bool thd_trip_point_check(int id, unsigned int read_temp, int pref);
+	bool thd_trip_point_check(int id, unsigned int read_temp, int pref, bool *reset);
 
 	void thd_trip_point_add_cdev(cthd_cdev &cdev, int influence);
 

@@ -38,10 +38,12 @@ int _temp, unsigned int _hyst, int _zone_id, int _sensor_id,
 }
 
 bool cthd_trip_point::thd_trip_point_check(int id, unsigned int read_temp,
-		int pref) {
+		int pref, bool *reset) {
 	int on = -1;
 	int off = -1;
 	bool apply = false;
+
+	*reset = false;
 
 	if (sensor_id != DEFAULT_SENSOR_ID && sensor_id != id)
 		return false;
@@ -67,7 +69,7 @@ bool cthd_trip_point::thd_trip_point_check(int id, unsigned int read_temp,
 			} else {
 				thd_log_debug("polling trip reached, off \n");
 				sensor->sensor_poll_trip(false);
-				thd_trip_cdev_state_reset();
+				*reset = true;
 			}
 			sensor->set_threshold(0, temp);
 		}
@@ -179,9 +181,10 @@ int cthd_trip_point::thd_trip_point_add_cdev_index(int _index, int influence) {
 }
 
 void cthd_trip_point::thd_trip_cdev_state_reset() {
+thd_log_info("thd_trip_cdev_state_reset \n");
 	for (int i = cdevs.size() - 1; i >= 0; --i) {
 		cthd_cdev *cdev = cdevs[i].cdev;
-		thd_log_debug("thd_trip_cdev_state_reset index %d:%s\n",
+		thd_log_info("thd_trip_cdev_state_reset index %d:%s\n",
 				cdev->thd_cdev_get_index(), cdev->get_cdev_type().c_str());
 		if (cdev->in_min_state()) {
 			thd_log_debug("Need to switch to next cdev \n");

@@ -48,6 +48,7 @@ static bool trip_sort(cthd_trip_point trip1, cthd_trip_point trip2) {
 void cthd_zone::thermal_zone_temp_change(int id, unsigned int temp, int pref) {
 	int i, count;
 	bool updated_max = false;
+	bool reset = false;
 
 	count = trip_points.size();
 	for (i = count - 1; i >= 0; --i) {
@@ -62,7 +63,12 @@ void cthd_zone::thermal_zone_temp_change(int id, unsigned int temp, int pref) {
 				updated_max = true;
 			}
 		}
-		trip_point.thd_trip_point_check(id, temp, pref);
+		trip_point.thd_trip_point_check(id, temp, pref, &reset);
+		// Force all cooling devices to min state
+		if (reset) {
+			zone_reset();
+			break;
+		}
 	}
 	// Re-adjust polling thresholds
 	if (updated_max) {
@@ -74,7 +80,7 @@ void cthd_zone::thermal_zone_temp_change(int id, unsigned int temp, int pref) {
 				trip_point.thd_trip_update_set_point(
 						thd_model->get_hot_zone_trigger_point());
 			}
-			trip_point.thd_trip_point_check(id, temp, pref);
+			trip_point.thd_trip_point_check(id, temp, pref, &reset);
 		}
 	}
 }

@@ -113,7 +113,7 @@ int cthd_sensor::set_threshold(int index, int temp) {
 
 void cthd_sensor::sensor_poll_trip(bool status) {
 	if (status)
-		thd_engine->thd_engine_poll_enable(0);
+		thd_engine->thd_engine_poll_enable(index);
 	else
-		thd_engine->thd_engine_poll_disable(0);
+		thd_engine->thd_engine_poll_disable(index);
 }

@@ -332,18 +332,18 @@ void cthd_engine::thermal_zone_change(message_capsul_t *msg) {
 }
 
 void cthd_engine::poll_enable_disable(bool status, message_capsul_t *msg) {
-	unsigned int *zone_id = (unsigned int*) msg->msg;
+	unsigned int *sensor_id = (unsigned int*) msg->msg;
 
 	if (status) {
-		poll_sensor_mask |= (1 << (*zone_id));
+		poll_sensor_mask |= (1 << (*sensor_id));
 		poll_timeout_msec = def_poll_interval;
-		thd_log_info("thd_engine polling enabled via %u \n", *zone_id);
+		thd_log_debug("thd_engine polling enabled via %u \n", *sensor_id);
 	} else {
-		poll_sensor_mask &= ~(1 << (*zone_id));
+		poll_sensor_mask &= ~(1 << (*sensor_id));
 		if (!poll_sensor_mask) {
 			poll_timeout_msec = -1;
-			thd_log_info("thd_engine polling last disabled via %u \n",
-					*zone_id);
+			thd_log_debug("thd_engine polling last disabled via %u \n",
+					*sensor_id);
 		}
 	}
 }
