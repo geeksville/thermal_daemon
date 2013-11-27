@@ -65,7 +65,9 @@ thermald_SOURCES = \
 		src/thd_pid.cpp \
 		src/thd_zone_generic.cpp \
 		src/thd_cdev_cpufreq.cpp \
-		src/thd_cdev_rapl.cpp
+		src/thd_cdev_rapl.cpp \
+		src/thd_cdev_intel_pstate_driver.cpp \
+		src/thd_cdev_intel_pstate_turbo.cpp
 
 man1_MANS = man/thermald.1
 

@@ -31,21 +31,12 @@
 #include "thd_cdev_gen_sysfs.h"
 #include "thd_cdev_cpufreq.h"
 #include "thd_cdev_rapl.h"
+#include "thd_cdev_intel_pstate_driver.h"
+#include "thd_cdev_intel_pstate_turbo.h"
 
 // Default CPU cooling devices, which are not part of thermal sysfs
 // Since non trivial initilzation is not supported, we init all fields even if they are not needed
 static cooling_dev_t cpu_def_cooling_devices[] = {
-	{	.status = true,
-		.mask = CDEV_DEF_BIT_UNIT_VAL | CDEV_DEF_BIT_STEP | CDEV_DEF_BIT_MAX_STATE | CDEV_DEF_BIT_PATH,
-		.index = 0, .unit_val = ABSOULUTE_VALUE, .min_state =0, .max_state = 1, .inc_dec_step = 1,
-		.read_back = false, .auto_down_control = true,
-		.type_string = "intel_pstate_turbo", .path_str = "/sys/devices/system/cpu/intel_pstate/no_turbo"},
-
-	{	.status = true,
-		.mask = CDEV_DEF_BIT_UNIT_VAL | CDEV_DEF_BIT_STEP | CDEV_DEF_BIT_MAX_STATE | CDEV_DEF_BIT_PATH,
-		.index = 0, .unit_val = RELATIVE_PERCENTAGES, .min_state =100, .max_state = 50, .inc_dec_step = -10,
-		.read_back = false, .auto_down_control = true,
-		.type_string = "intel_pstate", .path_str = "/sys/devices/system/cpu/intel_pstate/max_perf_pct"},
 	{	.status = true,
 		.mask = CDEV_DEF_BIT_UNIT_VAL | CDEV_DEF_BIT_READ_BACK | CDEV_DEF_BIT_MIN_STATE | CDEV_DEF_BIT_STEP | CDEV_DEF_BIT_AUTO_DOWN,
 		.index = 0, .unit_val = ABSOULUTE_VALUE, .min_state = 0, .max_state = 0, .inc_dec_step = 5,
@@ -330,6 +321,21 @@ int cthd_engine_default::read_cooling_devices() {
 	rapl_dev->set_cdev_type("rapl_controller");
 	if (rapl_dev->update() == THD_SUCCESS) {
 		cdevs.push_back(rapl_dev);
+		++cdev_cnt;
+	}
+	// Add Intel P state driver as cdev
+	cthd_intel_p_state_cdev *pstate_dev = new cthd_intel_p_state_cdev(cdev_cnt);
+	pstate_dev->set_cdev_type("intel_pstate");
+	if (pstate_dev->update() == THD_SUCCESS) {
+		cdevs.push_back(pstate_dev);
+		++cdev_cnt;
+	}
+	// Add Intel P state turbo on /off driver as cdev
+	cthd_cdev_intel_pstate_turbo *pstate_turbo_dev =
+			new cthd_cdev_intel_pstate_turbo(cdev_cnt);
+	pstate_turbo_dev->set_cdev_type("intel_pstate_turbo");
+	if (pstate_turbo_dev->update() == THD_SUCCESS) {
+		cdevs.push_back(pstate_turbo_dev);
 		++cdev_cnt;
 	}
 

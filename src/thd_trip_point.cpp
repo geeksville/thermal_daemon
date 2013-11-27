@@ -32,7 +32,7 @@ int _temp, unsigned int _hyst, int _zone_id, int _sensor_id,
 		trip_control_type_t _control_type) :
 		index(_index), type(_type), temp(_temp), hyst(_hyst), control_type(
 				_control_type), zone_id(_zone_id), sensor_id(_sensor_id), trip_on(
-				false) {
+				false), poll_on(false) {
 	thd_log_debug("Add trip pt %d:%d:0x%x:%d:%d\n", type, zone_id, sensor_id,
 			temp, hyst);
 }
@@ -63,16 +63,20 @@ bool cthd_trip_point::thd_trip_point_check(int id, unsigned int read_temp,
 	if (type == POLLING && sensor_id != DEFAULT_SENSOR_ID) {
 		cthd_sensor *sensor = thd_engine->get_sensor(sensor_id);
 		if (sensor) {
-			if (read_temp >= temp) {
+			if (!poll_on && read_temp >= temp) {
 				thd_log_debug("polling trip reached, on \n");
 				sensor->sensor_poll_trip(true);
-			} else {
+				poll_on = true;
+				sensor->set_threshold(0, temp);
+			} else if (poll_on && read_temp < temp){
 				thd_log_debug("polling trip reached, off \n");
 				sensor->sensor_poll_trip(false);
 				*reset = true;
+				poll_on = false;
+				sensor->set_threshold(0, temp);
 			}
-			sensor->set_threshold(0, temp);
 		}
+		return true;
 	}
 	thd_log_debug("pref %d type %d temp %d trip %d \n", pref, type, read_temp,
 			temp);

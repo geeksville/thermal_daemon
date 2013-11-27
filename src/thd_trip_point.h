@@ -63,6 +63,7 @@ private:
 	int zone_id;
 	int sensor_id;
 	bool trip_on;
+	bool poll_on;
 public:
 	static const int default_influence = 100;
 	cthd_trip_point(int _index, trip_point_type_t _type, unsigned int _temp,

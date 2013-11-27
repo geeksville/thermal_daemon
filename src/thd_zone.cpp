@@ -79,8 +79,8 @@ void cthd_zone::thermal_zone_temp_change(int id, unsigned int temp, int pref) {
 						thd_model->get_hot_zone_trigger_point());
 				trip_point.thd_trip_update_set_point(
 						thd_model->get_hot_zone_trigger_point());
+				trip_point.thd_trip_point_check(id, temp, pref, &reset);
 			}
-			trip_point.thd_trip_point_check(id, temp, pref, &reset);
 		}
 	}
 }
