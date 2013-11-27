@@ -37,6 +37,12 @@
 static cooling_dev_t cpu_def_cooling_devices[] = {
 	{	.status = true,
 		.mask = CDEV_DEF_BIT_UNIT_VAL | CDEV_DEF_BIT_STEP | CDEV_DEF_BIT_MAX_STATE | CDEV_DEF_BIT_PATH,
+		.index = 0, .unit_val = ABSOULUTE_VALUE, .min_state =0, .max_state = 1, .inc_dec_step = 1,
+		.read_back = false, .auto_down_control = true,
+		.type_string = "intel_pstate_turbo", .path_str = "/sys/devices/system/cpu/intel_pstate/no_turbo"},
+
+	{	.status = true,
+		.mask = CDEV_DEF_BIT_UNIT_VAL | CDEV_DEF_BIT_STEP | CDEV_DEF_BIT_MAX_STATE | CDEV_DEF_BIT_PATH,
 		.index = 0, .unit_val = RELATIVE_PERCENTAGES, .min_state =100, .max_state = 50, .inc_dec_step = -10,
 		.read_back = false, .auto_down_control = true,
 		.type_string = "intel_pstate", .path_str = "/sys/devices/system/cpu/intel_pstate/max_perf_pct"},

@@ -37,8 +37,8 @@
 #include "thd_engine_default.h"
 #include "thd_cdev_order_parser.h"
 
-const char *def_cooling_devices[] = { "rapl_controller", "intel_pstate",
-		"intel_powerclamp", "cpufreq", "Processor", NULL };
+const char *def_cooling_devices[] = { "rapl_controller", "intel_pstate_turbo",
+		"intel_pstate", "intel_powerclamp", "cpufreq", "Processor", NULL };
 
 cthd_zone_cpu::cthd_zone_cpu(int index, std::string path, int package_id) :
 		cthd_zone(index, path, SENSORS_CORELATED), dts_sysfs(path.c_str()), critical_temp(

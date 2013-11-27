@@ -10,6 +10,7 @@ The Following cooling device can present
 <CoolingDeviceOrder>
 	<!-- Specify Cooling device order -->
 	<CoolingDevice>rapl_controller</CoolingDevice>
+        <CoolingDevice>intel_pstate_turbo</CoolingDevice>
 	<CoolingDevice>intel_pstate</CoolingDevice>
 	<CoolingDevice>intel_powerclamp</CoolingDevice>
 	<CoolingDevice>cpufreq</CoolingDevice>
