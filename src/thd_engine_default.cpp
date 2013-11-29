@@ -32,7 +32,6 @@
 #include "thd_cdev_cpufreq.h"
 #include "thd_cdev_rapl.h"
 #include "thd_cdev_intel_pstate_driver.h"
-#include "thd_cdev_intel_pstate_turbo.h"
 
 // Default CPU cooling devices, which are not part of thermal sysfs
 // Since non trivial initilzation is not supported, we init all fields even if they are not needed
@@ -149,16 +148,22 @@ int cthd_engine_default::read_thermal_sensors() {
 				if (sensor_config->mask & SENSOR_DEF_BIT_ASYNC_CAPABLE)
 					sensor->set_async_capable(sensor_config->async_capable);
 			} else {
-				cthd_sensor *sensor = new cthd_sensor(index,
+				cthd_sensor *sensor_new = new cthd_sensor(index,
 						sensor_config->path, sensor_config->name,
 						SENSOR_TYPE_RAW);
-				if (sensor->sensor_update() != THD_SUCCESS)
-					return THD_ERROR;
-				sensors.push_back(sensor);
+				if (sensor_new->sensor_update() != THD_SUCCESS) {
+					delete sensor_new;
+					continue;
+				}
+				sensors.push_back(sensor_new);
 				++index;
 			}
 		}
 		sensor_count = index;
+	}
+
+	for (unsigned int i = 0; i < sensors.size(); ++i) {
+		sensors[i]->sensor_dump();
 	}
 
 	return THD_SUCCESS;
@@ -173,40 +178,6 @@ int cthd_engine_default::read_thermal_zones() {
 	thd_read_default_thermal_zones();
 	count = zone_count;
 
-	// Default CPU temperature zone
-	// Find path to read DTS temperature
-	if ((dir = opendir(base_path.c_str())) != NULL) {
-		while ((entry = readdir(dir)) != NULL) {
-			if (!strncmp(entry->d_name, "coretemp.", strlen("coretemp."))) {
-				cthd_zone_cpu *zone = new cthd_zone_cpu(count,
-						base_path + entry->d_name + "/",
-						atoi(entry->d_name + strlen("coretemp.")));
-				if (zone->zone_update() == THD_SUCCESS) {
-					zone->set_zone_active();
-					zones.push_back(zone);
-					++count;
-				}
-			}
-		}
-		closedir(dir);
-	}
-	if (!count) {
-		// No coretemp sysfs exist, try hwmon
-		thd_log_warn("Thermal DTS: No coretemp sysfs, trying hwmon \n");
-
-		cthd_zone_cpu *zone = new cthd_zone_cpu(count,
-				"/sys/class/hwmon/hwmon0/", 0);
-		if (zone->zone_update() == THD_SUCCESS) {
-			zone->set_zone_active();
-			zones.push_back(zone);
-			++count;
-		}
-
-		if (!count) {
-			thd_log_error("Thermal DTS or hwmon: No Zones present: \n");
-			return THD_FATAL_ERROR;
-		}
-	}
 	// Add from XML cooling device config
 	if (!parser_init() && parser.platform_matched()) {
 		for (int i = 0; i < parser.zone_count(); ++i) {
@@ -228,6 +199,45 @@ int cthd_engine_default::read_thermal_zones() {
 		}
 	}
 	zone_count = count;
+
+	if (!search_zone("cpu")) {
+		thd_log_info("zone cpu will be created \n");
+		// Default CPU temperature zone
+		// Find path to read DTS temperature
+		if ((dir = opendir(base_path.c_str())) != NULL) {
+			while ((entry = readdir(dir)) != NULL) {
+				if (!strncmp(entry->d_name, "coretemp.", strlen("coretemp."))) {
+					cthd_zone_cpu *zone = new cthd_zone_cpu(count,
+							base_path + entry->d_name + "/",
+							atoi(entry->d_name + strlen("coretemp.")));
+					if (zone->zone_update() == THD_SUCCESS) {
+						zone->set_zone_active();
+						zones.push_back(zone);
+						++count;
+					}
+				}
+			}
+			closedir(dir);
+		}
+
+		if (!count) {
+			// No coretemp sysfs exist, try hwmon
+			thd_log_warn("Thermal DTS: No coretemp sysfs, trying hwmon \n");
+
+			cthd_zone_cpu *zone = new cthd_zone_cpu(count,
+					"/sys/class/hwmon/hwmon0/", 0);
+			if (zone->zone_update() == THD_SUCCESS) {
+				zone->set_zone_active();
+				zones.push_back(zone);
+				++count;
+			}
+
+			if (!count) {
+				thd_log_error("Thermal DTS or hwmon: No Zones present: \n");
+				return THD_FATAL_ERROR;
+			}
+		}
+	}
 
 	zone_surface.init();
 
@@ -328,14 +338,6 @@ int cthd_engine_default::read_cooling_devices() {
 	pstate_dev->set_cdev_type("intel_pstate");
 	if (pstate_dev->update() == THD_SUCCESS) {
 		cdevs.push_back(pstate_dev);
-		++cdev_cnt;
-	}
-	// Add Intel P state turbo on /off driver as cdev
-	cthd_cdev_intel_pstate_turbo *pstate_turbo_dev =
-			new cthd_cdev_intel_pstate_turbo(cdev_cnt);
-	pstate_turbo_dev->set_cdev_type("intel_pstate_turbo");
-	if (pstate_turbo_dev->update() == THD_SUCCESS) {
-		cdevs.push_back(pstate_turbo_dev);
 		++cdev_cnt;
 	}
 

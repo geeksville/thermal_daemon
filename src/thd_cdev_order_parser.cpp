@@ -28,7 +28,7 @@
 cthd_cdev_order_parse::cthd_cdev_order_parse() :
 		doc(NULL), root_element(NULL) {
 	std::string name = TDCONFDIR;
-	filename = name + "/" "thermal-cdev-order.xml";
+	filename = name + "/" "thermal-cpu-cdev-order.xml";
 }
 
 int cthd_cdev_order_parse::parser_init() {

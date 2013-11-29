@@ -151,6 +151,19 @@ int cthd_zone::zone_update() {
 	if (ret != THD_SUCCESS)
 		return THD_ERROR;
 
+
+	for (unsigned int i = 0; i < trip_points.size(); ++i) {
+		cthd_trip_point &trip_point = trip_points[i];
+		unsigned int set_point;
+		if (trip_point.get_trip_type() == MAX) {
+			thd_model->set_max_temperature(trip_point.get_trip_temp());
+			set_point = thd_model->get_set_point();
+			if (set_point != thd_model->get_set_point()) {
+				trip_point.thd_trip_update_set_point(set_point);
+			}
+		}
+	}
+
 	return THD_SUCCESS;
 }
 

@@ -127,7 +127,7 @@ int cthd_parse::parse_new_trip_point(xmlNode * a_node, xmlDoc *doc,
 					trip_pt->trip_pt_type = PASSIVE;
 				else if (!strcasecmp(tmp_value, "critical"))
 					trip_pt->trip_pt_type = CRITICAL;
-				else if (!strcasecmp(tmp_value, "MAX"))
+				else if (!strcasecmp(tmp_value, "max"))
 					trip_pt->trip_pt_type = MAX;
 			} else if (!strcasecmp((const char*) cur_node->name,
 					"ControlType")) {
@@ -567,20 +567,24 @@ void cthd_parse::dump_thermal_conf() {
 
 bool cthd_parse::platform_matched() {
 	csys_fs thd_sysfs("/sys/class/dmi/id/");
-
+	
 	if (thd_sysfs.exists(std::string("product_uuid"))) {
 		thd_log_debug("checking UUID\n");
 		std::string str;
 		if (thd_sysfs.read("product_uuid", str) >= 0) {
 			thd_log_info("UUID is [%s]\n", str.c_str());
 			for (unsigned int i = 0; i < thermal_info_list.size(); ++i) {
+				if (thermal_info_list[i].uuid == "*") {
+					matched_thermal_info_index = i;
+					thd_log_info("UUID matched [wildcard]\n");
+					return true;
+				}
 				if (thermal_info_list[i].uuid == str) {
 					matched_thermal_info_index = i;
 					thd_log_info("Product UUID matched \n");
 					return true;
 				}
 			}
-			return false; // product uuid is present, but didn't match
 		}
 	}
 
@@ -600,6 +604,13 @@ bool cthd_parse::platform_matched() {
 			for (unsigned int i = 0; i < thermal_info_list.size(); ++i) {
 				if (!thermal_info_list[i].product_name.size())
 					continue;
+				thd_log_debug("config product name %s\n",
+					thermal_info_list[i].product_name.c_str()); 
+				if (thermal_info_list[i].product_name == "*") {
+					matched_thermal_info_index = i;
+					thd_log_info("Product Name matched [wildcard]\n");
+					return true;
+				}
 				if (thermal_info_list[i].product_name.compare(0,
 						strlen(product_name), product_name) == 0) {
 					matched_thermal_info_index = i;

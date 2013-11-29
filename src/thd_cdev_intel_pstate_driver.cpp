@@ -51,12 +51,33 @@ void cthd_intel_p_state_cdev::set_curr_state(int state, int arg) {
 		state_str << new_state;
 		thd_log_debug("set cdev state index %d state %d percent %d\n", index,
 				state, new_state);
+		if (new_state <= turbo_disable_percent)
+			set_turbo_disable_status(true);
+		else
+			set_turbo_disable_status(false);
 		if (cdev_sysfs.write(tc_state_dev.str(), state_str.str()) < 0)
 			curr_state = (state == 0) ? 0 : max_state;
 		else
 			curr_state = state;
 	} else
 		curr_state = (state == 0) ? 0 : max_state;
+}
+
+void cthd_intel_p_state_cdev::set_turbo_disable_status(bool enable) {
+	std::stringstream tc_state_dev;
+
+	if (enable == turbo_status) {
+		return;
+	}
+	tc_state_dev << "/no_turbo";
+	if (enable) {
+		cdev_sysfs.write(tc_state_dev.str(), "1");
+		thd_log_info("turbo disabled \n");
+	} else {
+		cdev_sysfs.write(tc_state_dev.str(), "0");
+		thd_log_info("turbo enabled \n");
+	}
+	turbo_status = enable;
 }
 
 int cthd_intel_p_state_cdev::get_max_state() {

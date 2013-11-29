@@ -73,7 +73,22 @@ int cthd_zone_generic::read_cdev_trip_points() {
 }
 
 void cthd_zone_generic::zone_bind_sensors() {
-	for (unsigned int i = 0; i < sensor_list.size(); ++i) {
-		bind_sensor(sensor_list[i]);
+
+	thermal_zone_t *zone_config = thd_engine->parser.get_zone_dev_index(
+			config_index);
+	int trip_point_cnt = 0;
+
+	if (!zone_config)
+		return;
+
+	for (unsigned int i = 0; i < zone_config->trip_pts.size(); ++i) {
+		trip_point_t &trip_pt_config = zone_config->trip_pts[i];
+		cthd_sensor *sensor = thd_engine->search_sensor(
+				trip_pt_config.sensor_type);
+		if (!sensor) {
+			thd_log_error("XML zone: invalid sensor type \n");
+			continue;
+		}
+		bind_sensor(sensor);
 	}
 }
