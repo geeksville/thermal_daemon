@@ -71,7 +71,6 @@ int cthd_cdev::thd_cdev_exponential_controller(int set_point, int target_temp,
 				curr_pow = 0;
 			}
 			trend_increase = true;
-			zone_mask |= (1 << zone_id);
 			if ((min_state < max_state && state > max_state)
 					|| (min_state > max_state && state < max_state))
 				state = max_state;
@@ -85,18 +84,11 @@ int cthd_cdev::thd_cdev_exponential_controller(int set_point, int target_temp,
 				|| (min_state > max_state && curr_state < min_state))
 				&& auto_down_adjust == false) {
 			int state = curr_state - inc_dec_val;
-			zone_mask &= ~(1 << zone_id);
-			if (zone_mask != 0) {
-				thd_log_debug(
-						"skip to reduce current state as this is controlled by two zone actions and one is still on %x\n",
-						zone_mask);
-			} else {
-				if ((min_state < max_state && state < min_state)
-						|| (min_state > max_state && state > min_state))
-					state = min_state;
-				thd_log_debug("op->device:%s %d\n", type_str.c_str(), state);
-				set_curr_state(state, zone_id);
-			}
+			if ((min_state < max_state && state < min_state)
+					|| (min_state > max_state && state > min_state))
+				state = min_state;
+			thd_log_debug("op->device:%s %d\n", type_str.c_str(), state);
+			set_curr_state(state, zone_id);
 		} else {
 			thd_log_debug("op->device: force min %s %d\n", type_str.c_str(),
 					min_state);
@@ -120,11 +112,24 @@ int cthd_cdev::thd_cdev_set_state(int set_point, int target_temp,
 
 	time(&tm);
 	thd_log_debug(">>thd_cdev_set_state index:%d state:%d\n", index, state);
-	if ((tm - last_action_time) < debounce_interval) {
+	if (last_state == state && (tm - last_action_time) <= debounce_interval) {
 		thd_log_debug("Ignore delay < debounce interval\n");
 		return THD_SUCCESS;
 	}
+	last_state = state;
+	if (state)
+		zone_mask |= (1 << zone_id);
+	else {
+		zone_mask &= ~(1 << zone_id);
+		if (zone_mask != 0) {
+			thd_log_debug(
+					"skip to reduce current state as this is controlled by two zone actions and one is still on %x\n",
+					zone_mask);
+			return THD_SUCCESS;
+		}
+	}
 	last_action_time = tm;
+
 	curr_state = get_curr_state();
 	if (curr_state == get_min_state()) {
 		control_begin();
@@ -149,7 +154,15 @@ int cthd_cdev::thd_cdev_set_state(int set_point, int target_temp,
 }
 ;
 
-int cthd_cdev::thd_cdev_set_min_state(int arg) {
-	set_curr_state(min_state, arg);
+int cthd_cdev::thd_cdev_set_min_state(int zone_id) {
+	zone_mask &= ~(1 << zone_id);
+	if (zone_mask != 0) {
+		thd_log_debug(
+				"skip to reduce current state as this is controlled by two zone actions and one is still on %x\n",
+				zone_mask);
+		return THD_SUCCESS;
+	}
+	set_curr_state(min_state, zone_id);
+
 	return THD_SUCCESS;
 }

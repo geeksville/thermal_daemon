@@ -87,6 +87,9 @@ static void daemonShutdown() {
 		thermald_dbus_server_stop();
 	if (pid_file_handle)
 		close(pid_file_handle);
+	thd_engine->thd_engine_terminate();
+	sleep(1);
+	delete thd_engine;
 }
 
 // Stop daemon
@@ -122,19 +125,34 @@ static void thermald_dbus_listen() {
 				bool status;
 				char *zone_name;
 				char *set_point;
-
 				DBusError error;
 
 				dbus_error_init(&error);
-				if (dbus_message_get_args(msg, &error,
-						DBUS_TYPE_STRING, &zone_name,
-						DBUS_TYPE_STRING, &set_point,
+				if (dbus_message_get_args(msg, &error, DBUS_TYPE_STRING,
+						&zone_name, DBUS_TYPE_STRING, &set_point,
 						DBUS_TYPE_INVALID)) {
 					thd_log_info("New Set Point %s\n", set_point);
 					cthd_preference thd_pref;
-					if (thd_engine->thd_engine_set_user_max_temp(
-							zone_name, set_point) == THD_SUCCESS)
+					if (thd_engine->thd_engine_set_user_max_temp(zone_name,
+							set_point) == THD_SUCCESS)
 						thd_engine->send_message(PREF_CHANGED, 0, NULL);
+				} else {
+					thd_log_error("dbus_message_get_args failed %s\n",
+							error.message);
+				}
+				dbus_error_free(&error);
+			} else if (!strcasecmp(method, "SetCurrentPreference")) {
+				bool status;
+				char *pref_str;
+				DBusError error;
+
+				dbus_error_init(&error);
+				if (dbus_message_get_args(msg, &error, DBUS_TYPE_STRING,
+						&pref_str, DBUS_TYPE_INVALID)) {
+					thd_log_info("New Pref %s\n", pref_str);
+					cthd_preference thd_pref;
+					thd_pref.set_preference(pref_str);
+					thd_engine->send_message(PREF_CHANGED, 0, NULL);
 				} else {
 					thd_log_error("dbus_message_get_args failed %s\n",
 							error.message);
@@ -161,11 +179,11 @@ static void thermald_dbus_listen() {
 static void signal_handler(int sig) {
 	switch (sig) {
 	case SIGHUP:
-		thd_log_warn("Received SIGHUP signal.");
+		thd_log_warn("Received SIGHUP signal. \n");
 		break;
 	case SIGINT:
 	case SIGTERM:
-		thd_log_info("Daemon exiting");
+		thd_log_info("Daemon exiting \n");
 		daemonShutdown();
 		exit(EXIT_SUCCESS);
 		break;
@@ -250,7 +268,7 @@ static void print_usage(FILE* stream, int exit_code) {
 	fprintf(stream, "  --help	Display this usage information.\n"
 			"  --version Show version.\n"
 			"  --no-daemon No daemon.\n"
-			"  --poll-interval poll interval 0 to disable.\n"
+			"  -poll-interval poll interval 0 to disable.\n"
 			"  --dbus-enable Enable dbus I/F.\n"
 			"  --exclusive_control to act as exclusive thermal controller. \n");
 
@@ -263,11 +281,15 @@ int main(int argc, char *argv[]) {
 	bool no_daemon = false;
 	bool exclusive_control = false;
 	bool dbus_enable = false;
-	const char* const short_options = "hv:np:dt";
-	static struct option long_options[] = { { "help", 0, 0, 0 }, { "version", 0,
-			0, 0 }, { "no-daemon", 0, 0, 0 }, { "poll-interval", 4, 0, 0 }, {
-			"dbus-enable", 0, 0, 0 }, { "exclusive_control", 0, 0, 0 }, { NULL,
-			0, NULL, 0 } };
+	bool test_mode = false;
+
+	const char* const short_options = "hvnp:de";
+	static struct option long_options[] = { { "help", no_argument, 0, 'h' }, {
+			"version", no_argument, 0, 'v' },
+			{ "no-daemon", no_argument, 0, 'n' }, { "poll-interval",
+					required_argument, 0, 'p' }, { "dbus-enable", no_argument,
+					0, 'd' }, { "exclusive_control", no_argument, 0, 'e' }, {
+					"test-mode", no_argument, 0, 't' }, { NULL, 0, NULL, 0 } };
 
 	if (argc > 1) {
 		while ((c = getopt_long(argc, argv, short_options, long_options,
@@ -287,6 +309,15 @@ int main(int argc, char *argv[]) {
 			case 'd':
 				dbus_enable = true;
 				break;
+			case 'p':
+				thd_poll_interval = atoi(optarg);
+				break;
+			case 'e':
+				exclusive_control = true;
+				break;
+			case 't':
+				test_mode = true;
+				break;
 			case -1:
 			case 0:
 				break;
@@ -295,7 +326,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-	if (getuid() != 0) {
+	if (getuid() != 0 && !test_mode) {
 		fprintf(stderr, "You must be root to run thermal daemon!\n");
 		exit(1);
 	}
@@ -308,10 +339,14 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	mkdir(TDCONFDIR, 0755); // Don't care return value as directory
-	if (!no_daemon)
+	if (!no_daemon) {
 		daemonize((char *) "/tmp/", (char *) "/tmp/thermald.pid");
+	} else
+		signal(SIGINT, signal_handler);
 
-	thd_log_info("Linux Thermal Daemon is starting mode %d \n", no_daemon);
+	thd_log_info(
+			"Linux Thermal Daemon is starting mode %d : poll_interval %d :ex_control %d\n",
+			no_daemon, thd_poll_interval, exclusive_control);
 
 	thd_engine = new cthd_engine_default();
 	if (exclusive_control)
@@ -322,12 +357,25 @@ int main(int argc, char *argv[]) {
 		thd_log_error("THD engine start failed: ");
 		exit(1);
 	}
+
 	// Initialize thermald objects
 	if (thd_engine->thd_engine_start(false) != THD_SUCCESS) {
 		thd_log_error("thermald engine start failed: ");
 		exit(1);
 	}
-
+#ifdef VALGRIND_TEST
+	// lots of STL lib function don't free memory
+	// when called with exit() fn.
+	// Here just run for some time and gracefully return.
+	sleep(10);
+	if (dbus_conn)
+	thermald_dbus_server_stop();
+	if (pid_file_handle)
+	close(pid_file_handle);
+	thd_engine->thd_engine_terminate();
+	sleep(1);
+	delete thd_engine;
+#else
 	if (dbus_enable) {
 		if (thermald_dbus_server_start()) {
 			fprintf(stderr, "Dbus start error\n");
@@ -339,7 +387,8 @@ int main(int argc, char *argv[]) {
 		for (;;)
 			sleep(0xffff);
 	}
-	thd_log_info("Linux Thermal Daemon is exiting \n");
 
+	thd_log_info("Linux Thermal Daemon is exiting \n");
+#endif
 	return 0;
 }

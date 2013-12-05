@@ -62,15 +62,16 @@ bool cthd_trip_point::thd_trip_point_check(int id, unsigned int read_temp,
 
 	if (type == POLLING && sensor_id != DEFAULT_SENSOR_ID) {
 		cthd_sensor *sensor = thd_engine->get_sensor(sensor_id);
-		if (sensor) {
+		if (sensor && sensor->check_async_capable()) {
 			if (!poll_on && read_temp >= temp) {
 				thd_log_debug("polling trip reached, on \n");
 				sensor->sensor_poll_trip(true);
 				poll_on = true;
 				sensor->set_threshold(0, temp);
-			} else if (poll_on && read_temp < temp){
+			} else if (poll_on && read_temp < temp) {
 				thd_log_debug("polling trip reached, off \n");
 				sensor->sensor_poll_trip(false);
+				thd_log_info("Dropped below poll threshold \n");
 				*reset = true;
 				poll_on = false;
 				sensor->set_threshold(0, temp);
@@ -185,7 +186,7 @@ int cthd_trip_point::thd_trip_point_add_cdev_index(int _index, int influence) {
 }
 
 void cthd_trip_point::thd_trip_cdev_state_reset() {
-thd_log_info("thd_trip_cdev_state_reset \n");
+	thd_log_info("thd_trip_cdev_state_reset \n");
 	for (int i = cdevs.size() - 1; i >= 0; --i) {
 		cthd_cdev *cdev = cdevs[i].cdev;
 		thd_log_info("thd_trip_cdev_state_reset index %d:%s\n",

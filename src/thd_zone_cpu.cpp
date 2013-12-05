@@ -172,7 +172,7 @@ int cthd_zone_cpu::read_trip_points() {
 
 	ret = parse_cdev_order();
 	if (ret == THD_SUCCESS) {
-		thd_log_info("CDEVS order specified in thermal-cdev-order.xml\n");
+		thd_log_info("CDEVS order specified in thermal-cpu-cdev-order.xml\n");
 		return THD_SUCCESS;
 	}
 	cthd_trip_point trip_pt_passive(trip_point_cnt, MAX, set_point,

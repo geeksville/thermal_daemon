@@ -57,14 +57,18 @@ cthd_engine::cthd_engine() :
 cthd_engine::~cthd_engine() {
 	unsigned int i;
 
+	for (i = 0; i < sensors.size(); ++i) {
+		delete sensors[i];
+	}
+	sensors.clear();
 	for (i = 0; i < zones.size(); ++i) {
 		delete zones[i];
 	}
-	zones.erase(zones.begin(), zones.begin() + i - 1);
+	zones.clear();
 	for (i = 0; i < cdevs.size(); ++i) {
 		delete cdevs[i];
 	}
-	cdevs.erase(cdevs.begin(), cdevs.begin() + i - 1);
+	cdevs.clear();
 }
 
 void cthd_engine::thd_engine_thread() {
@@ -612,6 +616,8 @@ void cthd_engine::thd_read_default_thermal_zones() {
 						"/sys/class/thermal/thermal_zone");
 				if (zone->zone_update() != THD_SUCCESS)
 					continue;
+				if (control_mode == EXCLUSIVE)
+					zone->set_zone_active();
 				zones.push_back(zone);
 			}
 		}

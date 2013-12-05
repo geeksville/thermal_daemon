@@ -487,6 +487,14 @@ int cthd_parse::start_parse() {
 }
 
 void cthd_parse::parser_deinit() {
+	for (unsigned int i = 0; i < thermal_info_list.size(); ++i) {
+		thermal_info_list[i].sensors.clear();
+		for (unsigned int j = 0; j < thermal_info_list[i].zones.size(); ++j) {
+			thermal_info_list[i].zones[j].trip_pts.clear();
+		}
+		thermal_info_list[i].zones.clear();
+		thermal_info_list[i].cooling_devs.clear();
+	}
 	xmlFreeDoc(doc);
 }
 
@@ -507,7 +515,6 @@ void cthd_parse::dump_thermal_conf() {
 			thd_log_info("\t Async Capable: %d\n",
 					thermal_info_list[i].sensors[j].async_capable);
 		}
-
 		for (unsigned int j = 0; j < thermal_info_list[i].zones.size(); ++j) {
 			thd_log_info("\tZone %d \n", j);
 			thd_log_info("\t Name: %s\n",
@@ -534,7 +541,6 @@ void cthd_parse::dump_thermal_conf() {
 					thd_log_info("\t\t\t  SamplingPeriod %d \n",
 							thermal_info_list[i].zones[j].trip_pts[k].cdev_trips[l].sampling_period);
 				}
-
 			}
 		}
 		for (unsigned int l = 0; l < thermal_info_list[i].cooling_devs.size();
@@ -567,7 +573,7 @@ void cthd_parse::dump_thermal_conf() {
 
 bool cthd_parse::platform_matched() {
 	csys_fs thd_sysfs("/sys/class/dmi/id/");
-	
+
 	if (thd_sysfs.exists(std::string("product_uuid"))) {
 		thd_log_debug("checking UUID\n");
 		std::string str;
@@ -590,7 +596,7 @@ bool cthd_parse::platform_matched() {
 
 	if (thd_sysfs.exists(std::string("product_name"))) {
 		thd_log_debug("checking product name\n");
-		char product_name[128];
+		char product_name[128] = { };
 		// Use different read method as the product name contains spaces
 		if (thd_sysfs.read("product_name", product_name, 127) >= 0) {
 			product_name[127] = '\0';
@@ -605,7 +611,7 @@ bool cthd_parse::platform_matched() {
 				if (!thermal_info_list[i].product_name.size())
 					continue;
 				thd_log_debug("config product name %s\n",
-					thermal_info_list[i].product_name.c_str()); 
+						thermal_info_list[i].product_name.c_str());
 				if (thermal_info_list[i].product_name == "*") {
 					matched_thermal_info_index = i;
 					thd_log_info("Product Name matched [wildcard]\n");

@@ -35,6 +35,10 @@
 #include "thd_sensor.h"
 #include "thd_model.h"
 
+static bool _trip_sort(cthd_trip_point trip1, cthd_trip_point trip2) {
+	return (trip1.get_trip_temp() < trip2.get_trip_temp());
+}
+
 typedef struct {
 	int zone;
 	int type;
@@ -72,10 +76,7 @@ private:
 public:
 	cthd_zone(int _index, std::string control_path, sensor_relate_t rel =
 			SENSOR_INDEPENDENT);
-	virtual ~cthd_zone() {
-		if (thd_model)
-			delete thd_model;
-	}
+	virtual ~cthd_zone();
 	void zone_temperature_notification(int type, int data);
 	int zone_update();
 	virtual void update_zone_preference();
@@ -84,6 +85,12 @@ public:
 	virtual int read_trip_points() = 0;
 	virtual int read_cdev_trip_points() = 0;
 	virtual void read_zone_temp();
+
+	int get_zone_index() {
+		return index;
+	}
+
+	void add_trip(cthd_trip_point &trip);
 
 	void set_zone_active() {
 		zone_active = true;
@@ -126,10 +133,15 @@ public:
 		thd_log_info("Zone %d: %s, Active:%d Bind:%d Sensor_cnt:%lu\n", index,
 				type_str.c_str(), zone_active, zone_cdev_binded_status,
 				sensors.size());
-
+		thd_log_info("..sensors.. \n");
 		for (unsigned int i = 0; i < sensors.size(); ++i) {
 			sensors[i]->sensor_dump();
 		}
+		thd_log_info("..trips.. \n");
+		for (unsigned int i = 0; i < trip_points.size(); ++i) {
+			trip_points[i].trip_dump();
+		}
+
 	}
 
 	;

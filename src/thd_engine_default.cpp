@@ -46,7 +46,6 @@ static cooling_dev_t cpu_def_cooling_devices[] = {
 cthd_engine_default::~cthd_engine_default() {
 	if (parser_init_done)
 		parser.parser_deinit();
-
 }
 
 int cthd_engine_default::parser_init() {
@@ -187,6 +186,34 @@ int cthd_engine_default::read_thermal_zones() {
 			cthd_zone *zone = search_zone(zone_config->type);
 			if (zone) {
 				thd_log_info("Zone already present \n");
+				for (unsigned int k = 0; k < zone_config->trip_pts.size();
+						++k) {
+					trip_point_t &trip_pt_config = zone_config->trip_pts[k];
+					cthd_sensor *sensor = search_sensor(
+							trip_pt_config.sensor_type);
+					if (!sensor) {
+						thd_log_error("XML zone: invalid sensor type \n");
+						continue;
+					}
+					zone->bind_sensor(sensor);
+					cthd_trip_point trip_pt(zone->get_trip_count(),
+							trip_pt_config.trip_pt_type,
+							trip_pt_config.temperature, trip_pt_config.hyst,
+							zone->get_zone_index(), sensor->get_index(),
+							trip_pt_config.control_type);
+					// bind cdev
+					for (unsigned int j = 0;
+							j < trip_pt_config.cdev_trips.size(); ++j) {
+						cthd_cdev *cdev = search_cdev(
+								trip_pt_config.cdev_trips[j].type);
+						if (cdev) {
+							trip_pt.thd_trip_point_add_cdev(*cdev,
+									trip_pt_config.cdev_trips[j].influence);
+						}
+					}
+					zone->add_trip(trip_pt);
+				}
+				zone->set_zone_active();
 			} else {
 				cthd_zone_generic *zone = new cthd_zone_generic(count, i,
 						zone_config->type);
@@ -239,7 +266,7 @@ int cthd_engine_default::read_thermal_zones() {
 		}
 	}
 
-	zone_surface.init();
+	//zone_surface.init();
 
 	for (unsigned int i = 0; i < zones.size(); ++i) {
 		zones[i]->zone_dump();
@@ -269,10 +296,13 @@ int cthd_engine_default::add_replace_cdev(cooling_dev_t *config) {
 		if (!cdev)
 			return THD_ERROR;
 		cdev->set_cdev_type(config->type_string);
-		if (cdev->update() != THD_SUCCESS)
+		if (cdev->update() != THD_SUCCESS) {
+			delete cdev;
 			return THD_ERROR;
+		}
 		cdevs.push_back(cdev);
 	}
+
 	if (config->mask & CDEV_DEF_BIT_UNIT_VAL) {
 		if (config->unit_val == RELATIVE_PERCENTAGES)
 			percent_unit = true;
@@ -332,14 +362,17 @@ int cthd_engine_default::read_cooling_devices() {
 	if (rapl_dev->update() == THD_SUCCESS) {
 		cdevs.push_back(rapl_dev);
 		++cdev_cnt;
-	}
+	} else
+		delete rapl_dev;
+
 	// Add Intel P state driver as cdev
 	cthd_intel_p_state_cdev *pstate_dev = new cthd_intel_p_state_cdev(cdev_cnt);
 	pstate_dev->set_cdev_type("intel_pstate");
 	if (pstate_dev->update() == THD_SUCCESS) {
 		cdevs.push_back(pstate_dev);
 		++cdev_cnt;
-	}
+	} else
+		delete pstate_dev;
 
 	// Add statically defined cooling devices
 	size = sizeof(cpu_def_cooling_devices) / sizeof(cooling_dev_t);
@@ -368,7 +401,8 @@ int cthd_engine_default::read_cooling_devices() {
 	if (cpu_freq_dev->update() == THD_SUCCESS) {
 		cdevs.push_back(cpu_freq_dev);
 		++cdev_cnt;
-	}
+	} else
+		delete cpu_freq_dev;
 
 	// Dump all cooling devices
 	for (unsigned i = 0; i < cdevs.size(); ++i) {

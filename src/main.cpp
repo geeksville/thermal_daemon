@@ -205,6 +205,7 @@ static int thd_dbus_server_proc(gboolean no_daemon) {
 	guint result;
 	PrefObject *value_obj;
 
+	thd_engine = NULL;
 	// Initialize the GType/GObject system
 	g_type_init();
 

@@ -69,7 +69,8 @@ public:
 	cthd_trip_point(int _index, trip_point_type_t _type, unsigned int _temp,
 			unsigned int _hyst, int _zone_id, int _sensor_id,
 			trip_control_type_t _control_type = PARALLEL);
-	bool thd_trip_point_check(int id, unsigned int read_temp, int pref, bool *reset);
+	bool thd_trip_point_check(int id, unsigned int read_temp, int pref,
+			bool *reset);
 
 	void thd_trip_point_add_cdev(cthd_cdev &cdev, int influence);
 
@@ -90,9 +91,40 @@ public:
 	unsigned int get_trip_temp() {
 		return temp;
 	}
+	unsigned int get_trip_hyst() {
+		return hyst;
+	}
+	void update_trip_temp(unsigned int _temp) {
+		temp = _temp;
+	}
+	void update_trip_hyst(unsigned int _temp) {
+		hyst = _temp;
+	}
+	int get_sensor_id() {
+		return sensor_id;
+	}
 	void trip_cdev_add(trip_pt_cdev_t trip_cdev) {
 		cdevs.push_back(trip_cdev);
 		std::sort(cdevs.begin(), cdevs.end(), trip_cdev_sort);
+	}
+	void trip_dump() {
+		std::string _type_str;
+		if (type == CRITICAL)
+			_type_str = "critical";
+		else if (type == MAX)
+			_type_str = "max";
+		else if (type == PASSIVE)
+			_type_str = "passive";
+		else if (type == ACTIVE)
+			_type_str = "active";
+		else if (type == POLLING)
+			_type_str = "polling";
+		else
+			_type_str = "invalid";
+		thd_log_info(
+				"index %d: type:%s temp:%u hyst:%u zone id:%d sensor id:%d cdev size:%lu\n",
+				index, _type_str.c_str(), temp, hyst, zone_id, sensor_id,
+				cdevs.size());
 	}
 };
 

@@ -6,13 +6,17 @@
 <!ELEMENT Sensor_path (#PCDATA)>
 <!ELEMENT Temperature (#PCDATA)>
 <!ELEMENT type (#PCDATA)>
-<!ELEMENT TripPoint (Temperature,CoolingDevice,type)>
+<!ELEMENT AsyncCapable (#PCDATA)>
+<!ELEMENT SensorType (#PCDATA)>
+<!ELEMENT ControlType (#PCDATA)>
+<!ELEMENT TripPoint (SensorType, Temperature,ControlType, CoolingDevice,type)>
 <!ELEMENT TripPoints (TripPoint)+>
 <!ELEMENT Kp (#PCDATA)>
 <!ELEMENT Ki (#PCDATA)>
 <!ELEMENT Kd (#PCDATA)>
 <!ELEMENT PidControl (Kp,Ki,Kd)>
-<!ELEMENT ThermalZone (Name,Sensor_path,TripPoints)>
+<!ELEMENT ThermalSensor (Type,Sensor_path,AsyncCapable)>
+<!ELEMENT ThermalZone (Type, TripPoints)>
 <!ELEMENT ThermalZones (ThermalZone)+>
 <!ELEMENT Index (#PCDATA)>
 <!ELEMENT Type (#PCDATA)>
@@ -21,7 +25,7 @@
 <!ELEMENT MaxState (#PCDATA)>
 <!ELEMENT IncDecStep (#PCDATA)>
 <!ELEMENT AutoOffMode (#PCDATA)>
-<!ELEMENT CoolingDevice (#PCDATA|Index|Type|Path|MinState|MaxState)*>
+<!ELEMENT CoolingDevice (#PCDATA|Index|Type|Path|MinState|MaxState|PidControl)*>
 <!ELEMENT CoolingDevices (CoolingDevice)+>
 <!ELEMENT Platform (Name,uuid,Preference,ThermalZones,CoolingDevices)>
 <!ELEMENT ThermalConfiguration (Platform)+>
@@ -43,69 +47,56 @@ Using DMI UUID to identify a platform. What else can we use?
 WILL BE ENHANCING TILL SOME TIME! SO DTD IS NOT FINAL.
 -->
 
-<!--
-Example below specifies
-- One platform thermal configuration data
-- Three temperature zones
-	Two temerature zones
-	One virtual temperature zone
-- 4 cooling devices
-	Two active cooling FAN type devices
-	one passive cooling using ACPI formula
-	one passive cooling with PID controller
--->
-
 <!-- BEGIN -->
 
 <!-- Thermal configuration -->
 <ThermalConfiguration>
 <Platform>
-	<Name>Shark Bay Client platform</Name>
-	<uuid>_920C9B16-9349-74C9-95EF-24CA229860DF</uuid>
-	<ProductName>Shark Bay Client platform</ProductName>
+	<Name>Example Platform Name</Name>
+	<!--UUID is optional, if present this will be matched -->
+	<!-- Both product name and UUID can contain 
+		wild card "*", which matches any platform
+	 -->
+	<UUID>Example UUID</UUID>
+	<ProductName>Example Product Name</ProductName>
 	<Preference>QUIET</Preference>
 	<ThermalSensors>
 		<ThermalSensor>
-			<Type>_DUMMY_SENSOR_1</Type>
-			<Path>/sys/class/thermal/thermal_zone0/temp</Path>
-			<AsyncCapable>1</AsyncCapable>
+			<!-- New Sensor with a type and path -->
+			<Type>example_sensor_1</Type>
+			<Path>/some_path</Path>
+			<AsyncCapable>0</AsyncCapable>
 		</ThermalSensor>
 		<ThermalSensor>
-			<Type>_DUMMY_SENSOR_2</Type>
-			<Path>/sys/class/thermal/thermal_zone1/temp</Path>
+			<!-- Already present in thermal sysfs, 
+				enable this or add/change config
+			-->
+			<Type>example_thermal_sysfs_sensor</Type>
+			<AsyncCapable>1</AsyncCapable>
 		</ThermalSensor>
 	</ThermalSensors>
-
 	<ThermalZones>
 		<ThermalZone>
-			<Type>DUMMY_ZONE_1</Type>
+			<Type>Example Zone type</Type>
 			<TripPoints>
 				<TripPoint>
-					<SensorType>_DUMMY_SENSOR_1</SensorType>
-					<Temperature> 60000 </Temperature>
-					<type>passive</type>
+					<SensorType>example_sensor_1</SensorType>
+					<Temperature> 75000 </Temperature>
+					<type>max</type>
 					<ControlType>SEQUENTIAL</ControlType>
 					<CoolingDevice>
 						<index>1</index>
-						<type> intel_powerclamp </type>
-						<influence> 60 </influence>
-						<SamplingPeriod>5000</SamplingPeriod>
-					</CoolingDevice>
-					<CoolingDevice>
-						<index>2</index>
-						<type> Processor </type>
-						<influence> 40 </influence>
+						<type>example_cooling_device</type>
+						<influence> 100 </influence>
 					</CoolingDevice>
 				</TripPoint>
+
 			</TripPoints>
 		</ThermalZone>
 	</ThermalZones>
 	<CoolingDevices>
 		<CoolingDevice>
-			<Type>Processor</Type>
-		</CoolingDevice>
-		<CoolingDevice>
-			<Type>intel_powerclamp</Type>
+			<Type>example_cooling_device</Type>
 			<MinState>0</MinState>
 			<IncDecStep>10</IncDecStep>
 			<ReadBack> 0 </ReadBack>
@@ -118,6 +109,50 @@ Example below specifies
 				<ki>0.0001</ki>
 			</PidControl>
 		</CoolingDevice>
+	</CoolingDevices>
+</Platform>
+
+
+<Platform>
+	<Name>Shark Bay Client platform</Name>
+	<ProductName>*</ProductName>
+	<Preference>QUIET</Preference>
+	<ThermalSensors>
+		<ThermalSensor>
+			<Type>pkg-temp-0</Type>
+			<AsyncCapable>1</AsyncCapable>
+		</ThermalSensor>
+	</ThermalSensors>
+	<ThermalZones>
+		<ThermalZone>
+			<!-- Zone Represent External case -->
+			<Type>Surface</Type>
+			<TripPoints>
+				<TripPoint>
+					<!-- SKIN temp sensor, present in thermal sysfs
+						Specify a temperature and attach cooling
+						devices
+					 -->
+					<SensorType>TSKN</SensorType>
+					<Temperature> 45000 </Temperature>
+					<type>passive</type>
+					<ControlType>SEQUENTIAL</ControlType>
+					<CoolingDevice>
+						<index>1</index>
+						<type>rapl_controller</type>
+						<influence> 100 </influence>
+					</CoolingDevice>
+					<CoolingDevice>
+						<index>2</index>
+						<type>intel_powerclamp</type>
+						<influence> 100 </influence>
+					</CoolingDevice>
+				</TripPoint>
+			</TripPoints>
+		</ThermalZone>
+	</ThermalZones>
+	<CoolingDevices>
+	<!-- NONE; All from thermal sysfs or built in like RAPL, PSTATE -->
 	</CoolingDevices>
 </Platform>
 </ThermalConfiguration>

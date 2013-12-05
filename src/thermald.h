@@ -71,6 +71,7 @@
 #define thd_log_info(...)	g_log(NULL, G_LOG_LEVEL_INFO, __VA_ARGS__)
 #else
 static int dummy_printf(const char *__restrict __format, ...) {
+	return 0;
 }
 #define thd_log_fatal		printf
 #define thd_log_error		printf
