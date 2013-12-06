@@ -29,9 +29,10 @@
 #include "thd_sys_fs.h"
 #include "thd_preference.h"
 #include "thd_cdev.h"
-
+#include <time.h>
 #include <vector>
 #include <algorithm>    // std::sort
+
 typedef enum {
 	CRITICAL, MAX, PASSIVE, ACTIVE, POLLING, INVALID_TRIP_TYPE
 } trip_point_type_t;
@@ -44,6 +45,8 @@ typedef enum {
 typedef struct {
 	cthd_cdev *cdev;
 	int influence;
+	int sampling_priod;
+	time_t last_op_time;
 } trip_pt_cdev_t;
 
 #define DEFAULT_SENSOR_ID	0xFFFF
@@ -72,7 +75,7 @@ public:
 	bool thd_trip_point_check(int id, unsigned int read_temp, int pref,
 			bool *reset);
 
-	void thd_trip_point_add_cdev(cthd_cdev &cdev, int influence);
+	void thd_trip_point_add_cdev(cthd_cdev &cdev, int influence, int sampling_period = 0);
 
 	void thd_trip_cdev_state_reset();
 	int thd_trip_point_value() {

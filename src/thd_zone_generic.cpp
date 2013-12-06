@@ -84,7 +84,8 @@ int cthd_zone_generic::read_trip_points() {
 					trip_pt_config.cdev_trips[j].type);
 			if (cdev) {
 				trip_ptr->thd_trip_point_add_cdev(*cdev,
-						trip_pt_config.cdev_trips[j].influence);
+						trip_pt_config.cdev_trips[j].influence,
+						trip_pt_config.cdev_trips[j].sampling_period);
 			}
 		}
 		if (add) {

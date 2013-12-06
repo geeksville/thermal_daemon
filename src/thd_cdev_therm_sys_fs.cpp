@@ -92,6 +92,9 @@ void cthd_sysfs_cdev::set_curr_state(int state, int arg) {
 
 int cthd_sysfs_cdev::get_curr_state() {
 
+	if (!read_back) {
+		return curr_state;
+	}
 	std::stringstream tc_state_dev;
 	tc_state_dev << "cooling_device" << index << "/cur_state";
 	if (cdev_sysfs.exists(tc_state_dev.str())) {

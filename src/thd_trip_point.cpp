@@ -125,8 +125,19 @@ bool cthd_trip_point::thd_trip_point_check(int id, unsigned int read_temp,
 	thd_log_debug("cdev size for this trippoint %lu\n", cdevs.size());
 	if (on > 0) {
 		for (unsigned i = 0; i < cdevs.size(); ++i) {
-
 			cthd_cdev *cdev = cdevs[i].cdev;
+
+			if (cdevs[i].sampling_priod) {
+				time_t tm;
+				time(&tm);
+				if ((tm - cdevs[i].last_op_time) < cdevs[i].sampling_priod) {
+					thd_log_info("Too early to act index %d tm %ld\n",
+							cdev->thd_cdev_get_index(),
+							tm - cdevs[i].last_op_time);
+					continue;
+				}
+				cdevs[i].last_op_time = tm;
+			}
 			thd_log_debug("cdev at index %d:%s\n", cdev->thd_cdev_get_index(),
 					cdev->get_cdev_type().c_str());
 			if (cdev->in_max_state()) {
@@ -164,10 +175,13 @@ bool cthd_trip_point::thd_trip_point_check(int id, unsigned int read_temp,
 	return true;
 }
 
-void cthd_trip_point::thd_trip_point_add_cdev(cthd_cdev &cdev, int influence) {
+void cthd_trip_point::thd_trip_point_add_cdev(cthd_cdev &cdev, int influence,
+		int sampling_period) {
 	trip_pt_cdev_t thd_cdev;
 	thd_cdev.cdev = &cdev;
 	thd_cdev.influence = influence;
+	thd_cdev.sampling_priod = sampling_period;
+	thd_cdev.last_op_time = 0;
 	trip_cdev_add(thd_cdev);
 }
 
